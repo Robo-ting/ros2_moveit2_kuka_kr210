@@ -1,7 +1,6 @@
 import os
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, ExecuteProcess, RegisterEventHandler, TimerAction
-from launch.substitutions import LaunchConfiguration
+from launch.actions import ExecuteProcess, RegisterEventHandler, TimerAction
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
 from launch.event_handlers import OnProcessExit
@@ -79,19 +78,14 @@ def generate_launch_description():
     
     # 双系统环境下可能出现找不到模型，通过启动延迟等待文件系统就绪
     ld = LaunchDescription()
-    ld.add_action(DeclareLaunchArgument(
-        'start_delay', default_value='5.0',
-        description='启动延迟秒数，双系统建议 5–10 秒'
-    ))
 
     ld.add_action(close_evt1)
     ld.add_action(close_evt2)
 
     ld.add_action(start_gazebo_cmd)
-    ld.add_action(TimerAction(
-        period=LaunchConfiguration('start_delay'),
-        actions=[node_robot_state_publisher, spawn_entity_cmd]
-    ))
+    ld.add_action(node_robot_state_publisher)
+    # spawn_entity 需等待 Gazebo 完全启动、/spawn_entity 服务就绪后再执行
+    ld.add_action(TimerAction(period=5.0, actions=[spawn_entity_cmd]))
 
     return ld
     

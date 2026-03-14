@@ -4,7 +4,7 @@
 
 ## 系统要求
 
-- **ROS2**：Humble 或更高版本
+- **ROS2**：Humble
 - **Ubuntu**：22.04（推荐）
 - **MoveIt2**：随 ROS2 安装
 
@@ -17,7 +17,7 @@
 sudo apt update
 sudo apt install -y ros-humble-moveit ros-humble-moveit-visual-tools
 
-# 若需 Gazebo 仿真，安装以下包
+# 安装以下ROS2依赖包
 sudo apt install -y ros-humble-gazebo-ros-pkgs ros-humble-gazebo-ros2-control
 ```
 
@@ -29,7 +29,7 @@ git clone https://github.com/Robo-ting/ros2_moveit2_kuka_kr210.git
 cd ros2_moveit2_kuka_kr210
 
 # 编译工作空间
-colcon build --symlink-install
+colcon build 
 
 # 加载环境（每次新开终端都需要执行）
 source install/setup.bash
@@ -56,14 +56,25 @@ source install/setup.bash
 ros2 launch kuka_moveit2 demo.launch.py
 ```
 
-### 2.2 方式二：仅 MoveIt + RViz
+### 2.2 方式二：MoveGroup + RViz（一体化启动）
+
+`my_moveit_rviz.launch.py` 同时启动 move_group 和 RViz，适合与 Gazebo 联用（内置 `use_sim_time`）：
 
 ```bash
 source install/setup.bash
+ros2 launch kuka_moveit2 my_moveit_rviz.launch.py
+```
+
+### 2.3 方式三：仅 RViz（需先启动 move_group）
+
+```bash
+# 终端 1
+ros2 launch kuka_moveit2 move_group.launch.py
+# 终端 2
 ros2 launch kuka_moveit2 moveit_rviz.launch.py
 ```
 
-### 2.3 RViz 中的操作
+### 2.4 RViz 中的操作
 
 1. 等待 RViz 和 MoveGroup 完全启动
 2. 在 RViz 左侧 **MotionPlanning** 插件中：
@@ -98,30 +109,23 @@ ros2 launch kuka_moveit2 gazebo.launch.py start_delay:=10.0
 
 ### 3.2 Gazebo 与 MoveIt 联合使用
 
-若要在 Gazebo 中执行 MoveIt 规划的轨迹，需要：
+若要在 Gazebo 中执行 MoveIt 规划的轨迹，**必须先启动 Gazebo，再启动 MoveIt**：
 
-**终端 1：启动 Gazebo**
+**终端 1：先启动 Gazebo**
 
 ```bash
 source install/setup.bash
 ros2 launch kuka_moveit2 gazebo.launch.py
 ```
 
-**终端 2：启动 MoveGroup（连接 Gazebo 的控制器）**
+等待 Gazebo 完全加载、机器人模型出现后，再执行下一步。
+
+**终端 2：再启动 MoveIt + RViz**
 
 ```bash
 source install/setup.bash
-ros2 launch kuka_moveit2 move_group.launch.py use_sim_time:=true
+ros2 launch kuka_moveit2 my_moveit_rviz.launch.py
 ```
-
-**终端 3：启动 RViz 进行规划与执行**
-
-```bash
-source install/setup.bash
-ros2 launch kuka_moveit2 moveit_rviz.launch.py use_sim_time:=true
-```
-
-> 与 Gazebo 联用时需设置 `use_sim_time:=true`，以保持时间同步。
 
 在 RViz 中规划并 **Execute** 时，轨迹会发送到 Gazebo 中的 `arm_controller`，机器人将在仿真中运动。
 
@@ -132,7 +136,8 @@ ros2 launch kuka_moveit2 moveit_rviz.launch.py use_sim_time:=true
 | 启动方式 | 预期效果 |
 |---------|---------|
 | `demo.launch.py` | RViz 中显示 KR210 模型，可进行运动规划与仿真执行 |
-| `moveit_rviz.launch.py` | 同上，适合与 Gazebo 等外部仿真配合 |
+| `my_moveit_rviz.launch.py` | MoveGroup + RViz 一体化，适合与 Gazebo 联用 |
+| `moveit_rviz.launch.py` | 仅 RViz，需先启动 move_group |
 | `gazebo.launch.py` | Gazebo 中加载 KR210，可接收关节轨迹控制 |
 | `move_group.launch.py` | 仅启动 MoveGroup 节点，供 RViz 或其他客户端连接 |
 
